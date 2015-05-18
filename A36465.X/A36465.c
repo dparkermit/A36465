@@ -197,8 +197,8 @@ void DoA36465(void) {
   local_debug_data.debug_C = 0;   
  
 
-  if (_T5IF) {
-    _T5IF = 0;
+  if (_T3IF) {
+    _T3IF = 0;
 
     
     if (_SYNC_CONTROL_CLEAR_DEBUG_DATA) {
@@ -267,9 +267,9 @@ void InitializeA36465(void) {
   _T1IE = 1;
   T1CON = T1CON_SETTING;
 
-  PR5 = PR5_VALUE_10_MILLISECONDS;
-  T5CON = T5CON_VALUE;
-  _T5IF = 0;
+  PR3 = PR3_VALUE_10_MILLISECONDS;
+  T3CON = T3CON_VALUE;
+  _T3IF = 0;
   
 
   ADCON2 = ADCON2_SETTING;
