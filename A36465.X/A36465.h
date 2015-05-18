@@ -3,7 +3,7 @@
 #define __A36465_H
 
 
-#define FCY_CLK_MHZ 10
+#define FCY_CLK 10000000
 
 
 #include <xc.h>
@@ -156,15 +156,15 @@
 
 
 /* 
-   TMR5 Configuration
-   Timer5 - Used for 10msTicToc
+   TMR3 Configuration
+   Timer3 - Used for 10msTicToc
    Period should be set to 10mS
    With 10Mhz Clock, x8 multiplier will yield max period of 17.7mS, 2.71uS per tick
 */
 
-#define T5CON_VALUE                    (T5_ON & T5_IDLE_CON & T5_GATE_OFF & T5_PS_1_8 & T5_SOURCE_INT)
-#define PR5_PERIOD_US                  10000   // 10mS
-#define PR5_VALUE_10_MILLISECONDS      (unsigned int)(FCY_CLK_MHZ*PR5_PERIOD_US/8)
+#define T3CON_VALUE                    (T3_ON & T3_IDLE_CON & T3_GATE_OFF & T3_PS_1_8 & T3_SOURCE_INT)
+#define PR3_PERIOD_US                  10000   // 10mS
+#define PR3_VALUE_10_MILLISECONDS      (unsigned int)((FCY_CLK / 1000000)*PR3_PERIOD_US/8)
 
 
 // Motor Drive Configuration
