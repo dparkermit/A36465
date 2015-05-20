@@ -78,9 +78,9 @@ void ETMCanSlaveLogCustomPacketD(void) {
   ETMCanSlaveLogData(
 		     ETM_CAN_DATA_LOG_REGISTER_AFC_FAST_READINGS,
 		     etm_can_next_pulse_count,
-		     1,//global_data_A36465.aft_A_sample.reading_scaled_and_calibrated,
-		     35,//global_data_A36465.aft_B_sample.reading_scaled_and_calibrated,
-		     17//global_data_A36465.aft_filtered_error_for_client
+		     global_data_A36465.aft_A_sample.reading_scaled_and_calibrated,
+		     global_data_A36465.aft_B_sample.reading_scaled_and_calibrated,
+		     global_data_A36465.aft_filtered_error_for_client
 		     );
 }
 
