@@ -112,6 +112,7 @@ void DoStateMachine(void) {
     afc_motor.min_position = AFC_MOTOR_MIN_POSITION;
     afc_motor.max_position = AFC_MOTOR_MAX_POSITION;
     afc_motor.target_position = afc_motor.home_position;
+    global_data_A36465.manual_target_position = afc_motor.home_position;
     global_data_A36465.afc_hot_position = afc_motor.home_position;
     while (global_data_A36465.control_state == STATE_AUTO_HOME) {
       DoA36465();
@@ -124,6 +125,7 @@ void DoStateMachine(void) {
   case STATE_RUN_AFC:
     while (global_data_A36465.control_state == STATE_RUN_AFC) {
       DoA36465();
+      global_data_A36465.manual_target_position = afc_motor.target_position;
       if (global_data_A36465.sample_complete) {
 	global_data_A36465.sample_complete = 0;
 	DoADCFilter();
@@ -435,10 +437,12 @@ unsigned int SlowModeGetStepsToMove(unsigned int samp_A, unsigned int samp_B) {
   if (error >= 200) {
     // I am comfortable with our measurement.
     // Use the full scaling to get the steps to move
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.305344), 0);
+    //steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.305344), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.100), 0);
   } else if(error >= 26) {
     // Our error is smaller and we don't want over correct due to signal error
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.152672), 0);
+    //steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.152672), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.05), 0);
   } else {
     // We are within 8 micro steps (1/4 full step) don't bother moving at all in slow mode
     steps = 0;
