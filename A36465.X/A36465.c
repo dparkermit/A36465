@@ -461,7 +461,7 @@ unsigned int SlowModeGetStepsToMove(unsigned int samp_A, unsigned int samp_B) {
 
 
 #define MIN_ERROR_STEPS_FAST_AFC                   32          // We are within one motor full step
-#define MAX_NUMBER_OF_PULSES_FOR_STARTUP_RESPONSE  256
+#define MAX_NUMBER_OF_PULSES_FOR_STARTUP_RESPONSE  512
 
 void DoAFC(void) {
   unsigned int direction_move;
@@ -491,7 +491,7 @@ void DoAFC(void) {
     steps_to_move = FastModeGetStepsToMove(global_data_A36465.aft_A_sample_filtered, global_data_A36465.aft_B_sample_filtered);
     local_debug_data.debug_F = steps_to_move;
 
-    if ((global_data_A36465.pulses_on_this_run >= 4) && (steps_to_move <= MIN_ERROR_STEPS_FAST_AFC)) {
+    if ((global_data_A36465.pulses_on_this_run >= MAX_NUMBER_OF_PULSES_FOR_STARTUP_RESPONSE) && (steps_to_move <= MIN_ERROR_STEPS_FAST_AFC)) {
       global_data_A36465.fast_afc_done = 1;
       global_data_A36465.pulses_on_this_run &= 0xFFF0;  // WE need to set the lowest nibble to zero to guarantee that we get new data in the filter before the first "slow" move
     }
