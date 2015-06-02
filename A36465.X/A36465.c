@@ -595,6 +595,11 @@ void DoADCFilter(void) {
     temp >>= 4;
     global_data_A36465.aft_B_sample_filtered = temp;
 
+    if (!global_data_A36465.fast_afc_done) {
+      global_data_A36465.aft_A_sample_filtered = global_data_A36465.aft_A_sample.reading_scaled_and_calibrated;
+      global_data_A36465.aft_B_sample_filtered = global_data_A36465.aft_B_sample.reading_scaled_and_calibrated;
+    }
+
   } else {
     global_data_A36465.aft_A_sample_filtered = global_data_A36465.aft_A_sample.reading_scaled_and_calibrated;
     global_data_A36465.aft_B_sample_filtered = global_data_A36465.aft_B_sample.reading_scaled_and_calibrated;
