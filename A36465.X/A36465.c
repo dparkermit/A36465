@@ -396,10 +396,10 @@ unsigned int FastModeGetStepsToMove(unsigned int samp_A, unsigned int samp_B) {
   if (error >= 500) {
     // I am comfortable with our measurement.
     // Use the full scaling to get the steps to move
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.305344), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.25), 0);
   } else if (error >= 100) {
     // Our error is smaller and we don't want over correct due to signal error
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.152672), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.175), 0);
   } else {
     // We are within 32 micro steps (1 full step) don't bother moving at all in fast mode
     steps = 0;
@@ -435,14 +435,16 @@ unsigned int SlowModeGetStepsToMove(unsigned int samp_A, unsigned int samp_B) {
   }
 
   if (error >= 400) {
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.175), 0);
+  } else if (error >= 200) {
     // I am comfortable with our measurement.
     // Use the full scaling to get the steps to move
     //steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.305344), 0);
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.025), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.15), 0);
   } else if(error >= 50) {
     // Our error is smaller and we don't want over correct due to signal error
     //steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.152672), 0);
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.0125), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.1), 0);
   } else {
     // We are within 8 micro steps (1/4 full step) don't bother moving at all in slow mode
     steps = 0;
