@@ -141,8 +141,8 @@
 
 // ---------------- Motor Configuration Values ------------- //
 #define MOTOR_PWM_FREQ            20000        // Motor Drive Frequency is 10KHz
-#define MOTOR_SPEED_FAST          400          // Motor Speed in Full Steps per Second in "Fast Mode"
-#define MOTOR_SPEED_SLOW          400           // 
+#define MOTOR_SPEED_FAST          200          // Motor Speed in Full Steps per Second in "Fast Mode"
+#define MOTOR_SPEED_SLOW          200           // 
 #define FCY_CLK                             10000000      // 10 MHz
 #define DELAY_SWITCH_TO_LOW_POWER_MODE 200
 
