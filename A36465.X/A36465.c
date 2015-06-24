@@ -13,6 +13,9 @@ _FGS(GWRP_OFF & GSS_OFF);
 _FICD(PGD);
 
 
+void DoAFCReversePower(void);
+void DoADCReversePowerFilter(void);
+
 
 unsigned int ShiftIndex(unsigned int index, unsigned int shift);
 
@@ -136,8 +139,15 @@ void DoStateMachine(void) {
       global_data_A36465.manual_target_position = afc_motor.target_position;
       if (global_data_A36465.sample_complete) {
 	global_data_A36465.sample_complete = 0;
+
+#ifdef __AFC_SIGMA_DELTA_MODE
 	DoADCFilter();
 	DoAFC();
+#else
+	DoADCReversePowerFilter();
+	DoAFCReversePower();
+#endif
+
 	if (_SYNC_CONTROL_HIGH_SPEED_LOGGING) {
 	  ETMCanSlaveLogCustomPacketC();
 	  ETMCanSlaveLogCustomPacketD();
@@ -157,7 +167,13 @@ void DoStateMachine(void) {
       afc_motor.target_position = global_data_A36465.manual_target_position;
       if (global_data_A36465.sample_complete) {
 	global_data_A36465.sample_complete = 0;
+
+#ifdef __AFC_SIGMA_DELTA_MODE
 	DoADCFilter();
+#else
+	DoADCReversePowerFilter();
+#endif
+
 	if (_SYNC_CONTROL_HIGH_SPEED_LOGGING) {
 	  ETMCanSlaveLogCustomPacketC();
 	  ETMCanSlaveLogCustomPacketD();
@@ -471,6 +487,9 @@ unsigned int SlowModeGetStepsToMove(unsigned int samp_A, unsigned int samp_B) {
 #define MIN_ERROR_STEPS_FAST_AFC                   32          // We are within one motor full step
 #define MAX_NUMBER_OF_PULSES_FOR_STARTUP_RESPONSE  512
 
+
+
+#ifdef __AFC_SIGMA_DELTA_MODE
 void DoAFC(void) {
   unsigned int direction_move;
   //unsigned int index_move;
@@ -483,6 +502,8 @@ void DoAFC(void) {
   direction_move = GetDirectionToMove(global_data_A36465.aft_A_sample_filtered, global_data_A36465.aft_B_sample_filtered);
 
   local_debug_data.debug_D = direction_move;
+
+  
   
   if (!global_data_A36465.fast_afc_done) {
     /*
@@ -614,6 +635,146 @@ void DoADCFilter(void) {
   }
 }
 
+
+
+#else
+
+
+typedef struct {
+  unsigned int forward_power;
+  unsigned int reverse_power;
+  unsigned int position;
+  unsigned int up_down_next;
+} TYPE_POSITION_HISTORY;
+
+typedef struct {
+  TYPE_POSITION_HISTORY history[32];
+  unsigned int position_index;
+  unsigned int reverse_power_when_tuned;
+  unsigned int step_size;
+} TYPE_REVERSE_POWER_AFC;
+
+TYPE_REVERSE_POWER_AFC reverse_power_afc_data;
+
+
+#define MINIMUM_FORWARD_POWER   1000
+#define DIRECTION_MOVE_UP       0
+#define DIRECTION_MOVE_DOWN     1
+
+unsigned int GetStepSizeReversePower(void);
+unsigned int GetDirectionMoveReversePower(void);
+
+void DoAFCReversePower(void) {
+  unsigned int direction_move;
+  unsigned int step_size;
+  unsigned int new_target_position;
+  unsigned int position_now;
+
+  if (global_data_A36465.forward_power_sample.reading_scaled_and_calibrated >= MINIMUM_FORWARD_POWER) {
+
+    position_now = afc_motor.current_position;
+    reverse_power_afc_data.position_index++;
+    reverse_power_afc_data.position_index &= 0x001F;
+    // stored the data to sample history
+    reverse_power_afc_data.history[reverse_power_afc_data.position_index].forward_power = global_data_A36465.forward_power_sample.reading_scaled_and_calibrated;
+    reverse_power_afc_data.history[reverse_power_afc_data.position_index].reverse_power = global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated;
+    reverse_power_afc_data.history[reverse_power_afc_data.position_index].position = position_now;
+    
+    step_size = GetStepSizeReversePower();
+    direction_move = GetDirectionMoveReversePower();
+    
+    reverse_power_afc_data.history[reverse_power_afc_data.position_index].up_down_next = direction_move;
+    
+    if (direction_move == DIRECTION_MOVE_DOWN) {
+      if (position_now > step_size) {
+	new_target_position = position_now - step_size;
+      } else {
+	new_target_position = 0;
+      }
+    } else {
+      if ((0xFFFF - step_size) > position_now) {
+	new_target_position = position_now + step_size;
+      } else {
+	new_target_position = 0xFFFF;
+      }
+    }
+    afc_motor.target_position = new_target_position;
+  }
+}
+
+void DoADCReversePowerFilter(void) {
+  
+  /*
+    DPARKER - For these tests 
+    Forward Power uses the same analog input as aft_A_sample
+    Reverse Power uses the same analog input as aft_B_sample
+  */
+  
+  
+  
+  global_data_A36465.pulses_on_this_run++;
+  global_data_A36465.pulse_off_counter = 0;
+  
+  if (_BUFS) {
+    global_data_A36465.reverse_power_sample.filtered_adc_reading = (ADCBUF1 << 6);
+    global_data_A36465.forward_power_sample.filtered_adc_reading = (ADCBUF2 << 6);
+  } else {
+    global_data_A36465.reverse_power_sample.filtered_adc_reading = (ADCBUF9 << 6);
+    global_data_A36465.forward_power_sample.filtered_adc_reading = (ADCBUFA << 6);
+  }
+  
+  // DPARKER configure this to convert to dBm
+  // DPARKER it has a negative slope so more math may be required
+   ETMAnalogScaleCalibrateADCReading(&global_data_A36465.reverse_power_sample);
+   ETMAnalogScaleCalibrateADCReading(&global_data_A36465.forward_power_sample);
+   
+}
+
+ unsigned int GetStepSizeReversePower(void) {
+   return 16;
+ }
+
+ unsigned int GetDirectionMoveReversePower(void) {
+   unsigned int previous_index;
+   unsigned int previous_reverse_power;
+   unsigned int previous_position;
+   unsigned int reverse_power;
+   unsigned int position;
+
+   unsigned int new_direction;
+
+   previous_index = reverse_power_afc_data.position_index--;
+   previous_index &= 0x001F;
+   previous_reverse_power = reverse_power_afc_data.history[previous_index].reverse_power;
+   previous_position = reverse_power_afc_data.history[previous_index].position;
+   reverse_power = reverse_power_afc_data.history[reverse_power_afc_data.position_index].reverse_power;
+   position = reverse_power_afc_data.history[reverse_power_afc_data.position_index].position;
+
+   if (position < previous_position) {
+     // We moved Down last time
+     if (reverse_power < previous_reverse_power) {
+      // The reverse power got better so keep going this way
+      new_direction = DIRECTION_MOVE_DOWN;
+    } else {
+      // There was no change in reverse power, go back the other way
+      new_direction = DIRECTION_MOVE_UP;
+    }
+  } else {
+    // We moved Up last time
+    if (reverse_power < previous_reverse_power) {
+      // The reverse power got better so keep going this way
+      new_direction = DIRECTION_MOVE_UP;
+    } else {
+      // There was no change in reverse power, go back the other way
+      new_direction = DIRECTION_MOVE_DOWN;
+    }
+  }
+  return new_direction;
+}
+
+#endif
+
+
 unsigned int ShiftIndex(unsigned int index, unsigned int shift) {
   unsigned int value;
   value = index;
@@ -622,6 +783,7 @@ unsigned int ShiftIndex(unsigned int index, unsigned int shift) {
   value &= 0x007F;
   return value;
 }
+
 
 
 

@@ -3,6 +3,10 @@
 #define __A36465_H
 
 
+#define __AFC_SIGMA_DELTA_MODE
+
+
+
 #define FCY_CLK 10000000
 
 
@@ -215,6 +219,11 @@ typedef struct {
   unsigned int aft_A_sample_history[16];
   unsigned int aft_B_sample_history[16];
   unsigned int aft_filtered_error_for_client;
+
+
+  AnalogInput  forward_power_sample;
+  AnalogInput  reverse_power_sample;
+  unsigned int filtered_reverse_power_for_client;
 
 } AFCControlData;
 

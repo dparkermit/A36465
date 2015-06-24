@@ -75,6 +75,7 @@ void ETMCanSlaveLogCustomPacketD(void) {
      Use this to log Board specific data packet
      This will get executed once per update cycle (1.6 seconds) and will be spaced out in time from the other log data
   */
+#ifdef __AFC_SIGMA_DELTA_MODE
   ETMCanSlaveLogData(
 		     ETM_CAN_DATA_LOG_REGISTER_AFC_FAST_READINGS,
 		     etm_can_next_pulse_count,
@@ -82,6 +83,15 @@ void ETMCanSlaveLogCustomPacketD(void) {
 		     global_data_A36465.aft_B_sample.reading_scaled_and_calibrated,
 		     global_data_A36465.aft_filtered_error_for_client
 		     );
+#else
+  ETMCanSlaveLogData(
+		     ETM_CAN_DATA_LOG_REGISTER_AFC_FAST_READINGS,
+		     etm_can_next_pulse_count,
+		     global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated,
+		     global_data_A36465.forward_power_sample.reading_scaled_and_calibrated,
+		     global_data_A36465.filtered_reverse_power_for_client
+		     );
+#endif
 }
 
 
