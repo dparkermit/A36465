@@ -3,7 +3,7 @@
 #define __A36465_H
 
 
-#define __AFC_SIGMA_DELTA_MODE
+//#define __AFC_SIGMA_DELTA_MODE
 
 
 

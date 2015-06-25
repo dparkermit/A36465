@@ -231,13 +231,15 @@ void DoA36465(void) {
   local_debug_data.debug_5 = global_data_A36465.fast_afc_done;
   local_debug_data.debug_6 = global_data_A36465.aft_A_sample.filtered_adc_reading;
   local_debug_data.debug_7 = global_data_A36465.aft_B_sample.filtered_adc_reading;
-
+  /*
   local_debug_data.debug_8 = global_data_A36465.aft_A_sample.reading_scaled_and_calibrated;
   local_debug_data.debug_9 = global_data_A36465.aft_B_sample.reading_scaled_and_calibrated;
   local_debug_data.debug_A = global_data_A36465.aft_A_sample_filtered;
   local_debug_data.debug_B = global_data_A36465.aft_B_sample_filtered;
   local_debug_data.debug_C = 0;   
- 
+  */
+  
+  
 
   if (_T3IF) {
     _T3IF = 0;
@@ -324,6 +326,7 @@ void InitializeA36465(void) {
   _INT1IF = 0;
   _INT1IP = 7;
   _INT1IE = 1;
+  _INT1EP = 1;
 
   
   // Initialize the status register and load the inhibit and fault masks
@@ -375,6 +378,29 @@ void InitializeA36465(void) {
 			   NO_FLOOR,
 			   NO_COUNTER,
 			   NO_COUNTER);
+
+  ETMAnalogInitializeInput(&global_data_A36465.reverse_power_sample,
+			   MACRO_DEC_TO_SCALE_FACTOR_16(.24909),
+			   6458,
+			   ANALOG_INPUT_NO_CALIBRATION,
+			   NO_OVER_TRIP,
+			   NO_UNDER_TRIP,
+			   NO_TRIP_SCALE,
+			   NO_FLOOR,
+			   NO_COUNTER,
+			   NO_COUNTER);
+
+  ETMAnalogInitializeInput(&global_data_A36465.forward_power_sample,
+			   MACRO_DEC_TO_SCALE_FACTOR_16(.24909),
+			   6458,
+			   ANALOG_INPUT_NO_CALIBRATION,
+			   NO_OVER_TRIP,
+			   NO_UNDER_TRIP,
+			   NO_TRIP_SCALE,
+			   NO_FLOOR,
+			   NO_COUNTER,
+			   NO_COUNTER);
+
 
   // Initialize the Can module
   ETMCanSlaveInitialize(FCY_CLK, ETM_CAN_ADDR_AFC_CONTROL_BOARD, _PIN_RG9, 4);
@@ -501,7 +527,7 @@ void DoAFC(void) {
   position_now = afc_motor.current_position;
   direction_move = GetDirectionToMove(global_data_A36465.aft_A_sample_filtered, global_data_A36465.aft_B_sample_filtered);
 
-  local_debug_data.debug_D = direction_move;
+  //local_debug_data.debug_D = direction_move;
 
   
   
@@ -657,7 +683,8 @@ typedef struct {
 TYPE_REVERSE_POWER_AFC reverse_power_afc_data;
 
 
-#define MINIMUM_FORWARD_POWER   1000
+#define MINIMUM_FORWARD_POWER   7500
+#define MAXIMUM_FORWARD_POWER   11000
 #define DIRECTION_MOVE_UP       0
 #define DIRECTION_MOVE_DOWN     1
 
@@ -670,7 +697,8 @@ void DoAFCReversePower(void) {
   unsigned int new_target_position;
   unsigned int position_now;
 
-  if (global_data_A36465.forward_power_sample.reading_scaled_and_calibrated >= MINIMUM_FORWARD_POWER) {
+  //if ((global_data_A36465.forward_power_sample.reading_scaled_and_calibrated >= MINIMUM_FORWARD_POWER) && (global_data_A36465.forward_power_sample.reading_scaled_and_calibrated <= MAXIMUM_FORWARD_POWER)) {
+  if ((global_data_A36465.forward_power_sample.reading_scaled_and_calibrated >= MINIMUM_FORWARD_POWER)) {
 
     position_now = afc_motor.current_position;
     reverse_power_afc_data.position_index++;
@@ -679,7 +707,7 @@ void DoAFCReversePower(void) {
     reverse_power_afc_data.history[reverse_power_afc_data.position_index].forward_power = global_data_A36465.forward_power_sample.reading_scaled_and_calibrated;
     reverse_power_afc_data.history[reverse_power_afc_data.position_index].reverse_power = global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated;
     reverse_power_afc_data.history[reverse_power_afc_data.position_index].position = position_now;
-    
+
     step_size = GetStepSizeReversePower();
     direction_move = GetDirectionMoveReversePower();
     
@@ -725,9 +753,32 @@ void DoADCReversePowerFilter(void) {
   
   // DPARKER configure this to convert to dBm
   // DPARKER it has a negative slope so more math may be required
-   ETMAnalogScaleCalibrateADCReading(&global_data_A36465.reverse_power_sample);
-   ETMAnalogScaleCalibrateADCReading(&global_data_A36465.forward_power_sample);
-   
+
+  local_debug_data.debug_8 = global_data_A36465.reverse_power_sample.filtered_adc_reading;
+  local_debug_data.debug_9 = global_data_A36465.forward_power_sample.filtered_adc_reading;
+  
+  
+  ETMAnalogScaleCalibrateADCReading(&global_data_A36465.reverse_power_sample);
+  ETMAnalogScaleCalibrateADCReading(&global_data_A36465.forward_power_sample);
+  
+  local_debug_data.debug_A = global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated;
+  local_debug_data.debug_B = global_data_A36465.forward_power_sample.reading_scaled_and_calibrated;
+
+  if (global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated > 13400) {
+    global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated = 0;
+  } else {
+    global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated = 13500 - global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated;
+  }
+
+  if (global_data_A36465.forward_power_sample.reading_scaled_and_calibrated > 13400) {
+    global_data_A36465.forward_power_sample.reading_scaled_and_calibrated = 0;
+  } else {
+    global_data_A36465.forward_power_sample.reading_scaled_and_calibrated = 13500 - global_data_A36465.forward_power_sample.reading_scaled_and_calibrated;
+  }
+
+  local_debug_data.debug_C = global_data_A36465.reverse_power_sample.reading_scaled_and_calibrated;
+  local_debug_data.debug_D = global_data_A36465.forward_power_sample.reading_scaled_and_calibrated;
+
 }
 
  unsigned int GetStepSizeReversePower(void) {
@@ -743,7 +794,8 @@ void DoADCReversePowerFilter(void) {
 
    unsigned int new_direction;
 
-   previous_index = reverse_power_afc_data.position_index--;
+   previous_index = reverse_power_afc_data.position_index;
+   previous_index--;
    previous_index &= 0x001F;
    previous_reverse_power = reverse_power_afc_data.history[previous_index].reverse_power;
    previous_position = reverse_power_afc_data.history[previous_index].position;
@@ -756,7 +808,7 @@ void DoADCReversePowerFilter(void) {
       // The reverse power got better so keep going this way
       new_direction = DIRECTION_MOVE_DOWN;
     } else {
-      // There was no change in reverse power, go back the other way
+      // Go back the other way
       new_direction = DIRECTION_MOVE_UP;
     }
   } else {
@@ -798,7 +850,7 @@ void __attribute__((interrupt, no_auto_psv, shadow)) _INT1Interrupt(void) {
     Need to add delay of 2.3us
   */
 
-  /*
+
   Nop();
   Nop();
   Nop();
@@ -824,7 +876,7 @@ void __attribute__((interrupt, no_auto_psv, shadow)) _INT1Interrupt(void) {
   Nop();
   Nop();
   Nop();  // 2.3uS
-  */
+
 
   _SAMP = 0;
   PIN_TEST_POINT_A = 1;
