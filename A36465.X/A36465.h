@@ -234,7 +234,7 @@ typedef struct {
 extern STEPPER_MOTOR afc_motor;
 
 #define _STATUS_AFC_AUTO_ZERO_HOME_IN_PROGRESS          _STATUS_0
-#define _STATUS_AFC_MODE_MANUAL_MODE                    _STATUS_1
+#define _STATUS_AFC_MODE_MANUAL_MODE                    _WARNING_0
 
 
 #define _FAULT_CAN_COMMUNICATION_LATCHED                _FAULT_0

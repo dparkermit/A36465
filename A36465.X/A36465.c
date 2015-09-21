@@ -138,9 +138,9 @@ void DoStateMachine(void) {
 	global_data_A36465.sample_complete = 0;
 	DoADCFilter();
 	DoAFC();
-	if (_SYNC_CONTROL_HIGH_SPEED_LOGGING) {
-	  ETMCanSlaveLogCustomPacketC();
-	  ETMCanSlaveLogCustomPacketD();
+	if (ETMCanSlaveGetSyncMsgHighSpeedLogging()) {
+	  //ETMCanSlaveLogCustomPacketC(); //DPARKER fix this
+	  //ETMCanSlaveLogCustomPacketD();
 	}
       }
 
@@ -158,9 +158,9 @@ void DoStateMachine(void) {
       if (global_data_A36465.sample_complete) {
 	global_data_A36465.sample_complete = 0;
 	DoADCFilter();
-	if (_SYNC_CONTROL_HIGH_SPEED_LOGGING) {
-	  ETMCanSlaveLogCustomPacketC();
-	  ETMCanSlaveLogCustomPacketD();
+	if (ETMCanSlaveGetSyncMsgHighSpeedLogging()) {
+	  //ETMCanSlaveLogCustomPacketC();  //DPARKER fix this
+ 	  //ETMCanSlaveLogCustomPacketD();
 	}
       }
       if (!_STATUS_AFC_MODE_MANUAL_MODE) {
@@ -207,6 +207,21 @@ void DoAFCCooldown(void) {
 
 void DoA36465(void) {
   ETMCanSlaveDoCan();
+  ETMCanSlaveSetDebugRegister(0, afc_motor.target_position);
+  ETMCanSlaveSetDebugRegister(1, afc_motor.current_position);
+  ETMCanSlaveSetDebugRegister(2, afc_motor.home_position);
+  ETMCanSlaveSetDebugRegister(3, global_data_A36465.control_state);
+  ETMCanSlaveSetDebugRegister(4, global_data_A36465.pulses_on_this_run);
+  ETMCanSlaveSetDebugRegister(5, global_data_A36465.fast_afc_done);
+  ETMCanSlaveSetDebugRegister(6, global_data_A36465.aft_A_sample.filtered_adc_reading);
+  ETMCanSlaveSetDebugRegister(7, global_data_A36465.aft_B_sample.filtered_adc_reading);
+
+  ETMCanSlaveSetDebugRegister(8, global_data_A36465.aft_A_sample.reading_scaled_and_calibrated);
+  ETMCanSlaveSetDebugRegister(9, global_data_A36465.aft_B_sample.reading_scaled_and_calibrated);
+  ETMCanSlaveSetDebugRegister(0xA, global_data_A36465.aft_A_sample_filtered);
+  ETMCanSlaveSetDebugRegister(0xB, global_data_A36465.aft_B_sample_filtered);
+  ETMCanSlaveSetDebugRegister(0xC, 0);
+  /*
   local_debug_data.debug_0 = afc_motor.target_position;
   local_debug_data.debug_1 = afc_motor.current_position;
   local_debug_data.debug_2 = afc_motor.home_position;
@@ -221,14 +236,14 @@ void DoA36465(void) {
   local_debug_data.debug_A = global_data_A36465.aft_A_sample_filtered;
   local_debug_data.debug_B = global_data_A36465.aft_B_sample_filtered;
   local_debug_data.debug_C = 0;   
- 
+ */
 
   if (_T3IF) {
     _T3IF = 0;
 
     
-    if (_SYNC_CONTROL_CLEAR_DEBUG_DATA) {
-      global_data_A36465.pulses_on_this_run = 0;
+    if (ETMCanSlaveGetSyncMsgClearDebug()) {
+      //global_data_A36465.pulses_on_this_run = 0; DPARKER fix this
     }
 
     //update the AFT control voltage
@@ -313,15 +328,14 @@ void InitializeA36465(void) {
   // Initialize the status register and load the inhibit and fault masks
   _FAULT_REGISTER = 0;
   _CONTROL_REGISTER = 0;
-  etm_can_status_register.data_word_A = 0x0000;
-  etm_can_status_register.data_word_B = 0x0000;
+  _WARNING_REGISTER = 0;
+  _NOT_LOGGED_REGISTER = 0;
   
-  etm_can_my_configuration.firmware_major_rev = FIRMWARE_AGILE_REV;
-  etm_can_my_configuration.firmware_branch = FIRMWARE_BRANCH;
-  etm_can_my_configuration.firmware_minor_rev = FIRMWARE_MINOR_REV;
-
   // Initialize the External EEprom
   ETMEEPromConfigureExternalDevice(EEPROM_SIZE_8K_BYTES, FCY_CLK, 400000, EEPROM_I2C_ADDRESS_0, 1);
+
+#define AGILE_REV 10
+#define SERIAL_NUMBER 101
 
   // Initialize LTC DAC
   //SetupLTC265X(&U23_LTC2654, ETM_SPI_PORT_1, FCY_CLK, LTC265X_SPI_2_5_M_BIT, _PIN_RG15, _PIN_RC1);
@@ -360,9 +374,10 @@ void InitializeA36465(void) {
 			   NO_COUNTER,
 			   NO_COUNTER);
 
+
   // Initialize the Can module
-  ETMCanSlaveInitialize(FCY_CLK, ETM_CAN_ADDR_AFC_CONTROL_BOARD, _PIN_RG9, 4);
-  ETMCanSlaveLoadConfiguration(36465,0, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV);
+  ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_AFC_CONTROL_BOARD, _PIN_RG9, 4);
+  ETMCanSlaveLoadConfiguration(36465,0,AGILE_REV, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV, SERIAL_NUMBER);
 }
 
 
@@ -482,7 +497,8 @@ void DoAFC(void) {
   position_now = afc_motor.current_position;
   direction_move = GetDirectionToMove(global_data_A36465.aft_A_sample_filtered, global_data_A36465.aft_B_sample_filtered);
 
-  local_debug_data.debug_D = direction_move;
+ // local_debug_data.debug_D = direction_move;
+  ETMCanSlaveSetDebugRegister(0xD, direction_move);
   
   if (!global_data_A36465.fast_afc_done) {
     /*
@@ -497,7 +513,8 @@ void DoAFC(void) {
     */
     //steps_to_move = index_move;
     steps_to_move = FastModeGetStepsToMove(global_data_A36465.aft_A_sample_filtered, global_data_A36465.aft_B_sample_filtered);
-    local_debug_data.debug_F = steps_to_move;
+    //local_debug_data.debug_F = steps_to_move;
+    ETMCanSlaveSetDebugRegister(0xF, steps_to_move);
 
     if ((global_data_A36465.pulses_on_this_run >= MAX_NUMBER_OF_PULSES_FOR_STARTUP_RESPONSE) && (steps_to_move <= MIN_ERROR_STEPS_FAST_AFC)) {
       global_data_A36465.fast_afc_done = 1;
@@ -514,7 +531,8 @@ void DoAFC(void) {
     */
     //steps_to_move = index_move >> 1;
     steps_to_move = SlowModeGetStepsToMove(global_data_A36465.aft_A_sample_filtered, global_data_A36465.aft_B_sample_filtered);
-    local_debug_data.debug_F = steps_to_move;
+    //local_debug_data.debug_F = steps_to_move;
+    ETMCanSlaveSetDebugRegister(0xF, steps_to_move);
   
     if ((global_data_A36465.pulses_on_this_run & 0xF) != 0xF) {
       // We only want to adjust the position once every 16 pulses (because we are averaging the position to move for 16 pulses)
@@ -728,4 +746,59 @@ void __attribute__((interrupt, no_auto_psv)) _DefaultInterrupt(void) {
   Nop();
   Nop();
   __asm__ ("Reset");
+}
+
+
+
+
+void ETMCanSlaveExecuteCMDBoardSpecific(ETMCanMessage* message_ptr) {
+  unsigned int index_word;
+
+  index_word = message_ptr->word3;
+  switch (index_word)
+    {
+      /*
+	Place all board specific commands here
+      */
+    case ETM_CAN_REGISTER_AFC_SET_1_HOME_POSITION_AND_OFFSET:
+      afc_motor.home_position = message_ptr->word0;
+      // unused offset
+      ETMAnalogSetOutput(&global_data_A36465.aft_control_voltage, message_ptr->word2);
+      _CONTROL_NOT_CONFIGURED = 0;
+      break;
+
+    case ETM_CAN_REGISTER_AFC_CMD_SELECT_AFC_MODE:
+      _STATUS_AFC_MODE_MANUAL_MODE = 0;
+      break;
+
+    case ETM_CAN_REGISTER_AFC_CMD_SELECT_MANUAL_MODE:
+      _STATUS_AFC_MODE_MANUAL_MODE = 1;
+      break;
+
+    case ETM_CAN_REGISTER_AFC_CMD_SET_MANUAL_TARGET_POSITION:
+      global_data_A36465.manual_target_position = message_ptr->word0;
+      break;
+
+    case ETM_CAN_REGISTER_AFC_CMD_RELATIVE_MOVE_MANUAL_TARGET:
+      if (message_ptr->word1) {
+	// decrease the target position;
+	if (global_data_A36465.manual_target_position > message_ptr->word0) {
+	  global_data_A36465.manual_target_position -= message_ptr->word0;
+	} else {
+	  global_data_A36465.manual_target_position = 0;
+	}
+      } else {
+	// increase the target position;
+	if ((0xFFFF - message_ptr->word0) > global_data_A36465.manual_target_position) {
+	  global_data_A36465.manual_target_position += message_ptr->word0;
+	} else {
+	  global_data_A36465.manual_target_position = 0xFFFF;
+	}
+      }
+      break;
+
+    default:
+      //local_can_errors.invalid_index++;
+      break;
+    }
 }
