@@ -221,22 +221,22 @@ void DoA36465(void) {
   ETMCanSlaveSetDebugRegister(0xA, global_data_A36465.aft_A_sample_filtered);
   ETMCanSlaveSetDebugRegister(0xB, global_data_A36465.aft_B_sample_filtered);
   ETMCanSlaveSetDebugRegister(0xC, 0);
-  /*
-  local_debug_data.debug_0 = afc_motor.target_position;
-  local_debug_data.debug_1 = afc_motor.current_position;
-  local_debug_data.debug_2 = afc_motor.home_position;
-  local_debug_data.debug_3 = global_data_A36465.control_state;
-  local_debug_data.debug_4 = global_data_A36465.pulses_on_this_run;
-  local_debug_data.debug_5 = global_data_A36465.fast_afc_done;
-  local_debug_data.debug_6 = global_data_A36465.aft_A_sample.filtered_adc_reading;
-  local_debug_data.debug_7 = global_data_A36465.aft_B_sample.filtered_adc_reading;
 
-  local_debug_data.debug_8 = global_data_A36465.aft_A_sample.reading_scaled_and_calibrated;
-  local_debug_data.debug_9 = global_data_A36465.aft_B_sample.reading_scaled_and_calibrated;
-  local_debug_data.debug_A = global_data_A36465.aft_A_sample_filtered;
-  local_debug_data.debug_B = global_data_A36465.aft_B_sample_filtered;
-  local_debug_data.debug_C = 0;   
- */
+  slave_board_data.log_data[0] = 0;
+  slave_board_data.log_data[1] = afc_motor.target_position;
+  slave_board_data.log_data[2] = afc_motor.current_position;
+  
+  slave_board_data.log_data[4] = global_data_A36465.aft_filtered_error_for_client;
+  slave_board_data.log_data[5] = global_data_A36465.aft_B_sample_filtered;
+  slave_board_data.log_data[6] = global_data_A36465.aft_A_sample_filtered;
+
+  slave_board_data.log_data[8] = global_data_A36465.aft_control_voltage.set_point;
+  slave_board_data.log_data[11] = afc_motor.home_position;
+  
+  
+
+  
+
 
   if (_T3IF) {
     _T3IF = 0;
