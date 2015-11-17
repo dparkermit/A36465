@@ -76,7 +76,7 @@ void DoA36465(void);
 #define STATE_AUTO_HOME     0x30
 #define STATE_RUN_AFC       0x40
 #define STATE_RUN_MANUAL    0x50
-#define STATE_FAULT         0x60
+
 
 
 int main(void) {
@@ -139,8 +139,17 @@ void DoStateMachine(void) {
 	DoADCFilter();
 	DoAFC();
 	if (ETMCanSlaveGetSyncMsgHighSpeedLogging()) {
-	  //ETMCanSlaveLogCustomPacketC(); //DPARKER fix this
-	  //ETMCanSlaveLogCustomPacketD();
+	  ETMCanSlaveLogPulseData(ETM_CAN_DATA_LOG_REGISTER_AFC_FAST_LOG_0,
+				  global_data_A36465.sample_index,
+				  afc_motor.current_position,
+				  afc_motor.target_position,
+				  0x0000);
+	  
+	  ETMCanSlaveLogPulseData(ETM_CAN_DATA_LOG_REGISTER_AFC_FAST_LOG_0,
+				  global_data_A36465.sample_index,
+				  global_data_A36465.aft_A_sample.reading_scaled_and_calibrated,
+				  global_data_A36465.aft_B_sample.reading_scaled_and_calibrated,
+				  global_data_A36465.aft_filtered_error_for_client);
 	}
       }
 
@@ -159,8 +168,17 @@ void DoStateMachine(void) {
 	global_data_A36465.sample_complete = 0;
 	DoADCFilter();
 	if (ETMCanSlaveGetSyncMsgHighSpeedLogging()) {
-	  //ETMCanSlaveLogCustomPacketC();  //DPARKER fix this
- 	  //ETMCanSlaveLogCustomPacketD();
+	  ETMCanSlaveLogPulseData(ETM_CAN_DATA_LOG_REGISTER_AFC_FAST_LOG_0,
+				  global_data_A36465.sample_index,
+				  afc_motor.current_position,
+				  afc_motor.target_position,
+				  0x0000);
+
+	  ETMCanSlaveLogPulseData(ETM_CAN_DATA_LOG_REGISTER_AFC_FAST_LOG_0,
+				  global_data_A36465.sample_index,
+				  global_data_A36465.aft_A_sample.reading_scaled_and_calibrated,
+				  global_data_A36465.aft_B_sample.reading_scaled_and_calibrated,
+				  global_data_A36465.aft_filtered_error_for_client);
 	}
       }
       if (!_STATUS_AFC_MODE_MANUAL_MODE) {
@@ -169,12 +187,6 @@ void DoStateMachine(void) {
     }
     break;
     
- case STATE_FAULT:
-    while (global_data_A36465.control_state == STATE_FAULT) {
-      DoA36465();
-    }
-    break;
-
 
   default:
     global_data_A36465.control_state = STATE_RUN_AFC;
@@ -235,18 +247,36 @@ void DoA36465(void) {
   
   
 
-  
-
-
   if (_T3IF) {
     _T3IF = 0;
 
-    
-    if (ETMCanSlaveGetSyncMsgClearDebug()) {
-      //global_data_A36465.pulses_on_this_run = 0; DPARKER fix this
+    // Check for Can Faults
+    if (ETMCanSlaveGetComFaultStatus()) {
+      _FAULT_CAN_COMMUNICATION_LATCHED = 1;
+    } else {
+      if (ETMCanSlaveGetSyncMsgResetEnable()) {
+	_FAULT_CAN_COMMUNICATION_LATCHED = 0;
+      }
     }
 
-    //update the AFT control voltage
+    
+    if (_FAULT_CAN_COMMUNICATION_LATCHED ||
+	(global_data_A36465.control_state == STATE_STARTUP) ||
+	(global_data_A36465.control_state == STATE_AUTO_ZERO) ||
+	(global_data_A36465.control_state == STATE_AUTO_HOME)) {
+	  _CONTROL_NOT_READY = 1;
+	} else {
+	  _CONTROL_NOT_READY = 0;
+	}
+
+    
+    if (ETMCanSlaveGetSyncMsgClearDebug()) {
+      global_data_A36465.pulses_on_this_run = 0;
+      // DPARKER add any other datat to me clear on debug clear
+    }
+
+    // update the AFT control voltage
+    // DPARKER consider timing this with Magnetron pulses
     ETMAnalogScaleCalibrateDACSetting(&global_data_A36465.aft_control_voltage);
     WriteLTC265X(&U23_LTC2654, LTC265X_WRITE_AND_UPDATE_DAC_A, global_data_A36465.aft_control_voltage.dac_setting_scaled_and_calibrated);
   
@@ -338,7 +368,6 @@ void InitializeA36465(void) {
 #define SERIAL_NUMBER 101
 
   // Initialize LTC DAC
-  //SetupLTC265X(&U23_LTC2654, ETM_SPI_PORT_1, FCY_CLK, LTC265X_SPI_2_5_M_BIT, _PIN_RG15, _PIN_RC1);
   SetupLTC265X(&U23_LTC2654, ETM_SPI_PORT_1, FCY_CLK, LTC265X_SPI_2_5_M_BIT, _PIN_RC1, _PIN_RC3);
 
 #define AFT_CONTROL_VOLTAGE_MAX_PROGRAM  12000
@@ -376,8 +405,8 @@ void InitializeA36465(void) {
 
 
   // Initialize the Can module
-  ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_AFC_CONTROL_BOARD, _PIN_RG9, 4);
-  ETMCanSlaveLoadConfiguration(36465,0,AGILE_REV, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV, SERIAL_NUMBER);
+  ETMCanSlaveInitialize(CAN_PORT_1, FCY_CLK, ETM_CAN_ADDR_AFC_CONTROL_BOARD, _PIN_RG9, 4, _PIN_RG6, _PIN_RG8);
+  ETMCanSlaveLoadConfiguration(36465, 0, FIRMWARE_AGILE_REV, FIRMWARE_BRANCH, FIRMWARE_MINOR_REV);
 }
 
 
@@ -689,6 +718,7 @@ void __attribute__((interrupt, no_auto_psv, shadow)) _INT1Interrupt(void) {
   PIN_TEST_POINT_A = 0;
   _INT1IF = 0;
 
+  global_data_A36465.sample_index = ETMCanSlaveGetPulseCount();
   global_data_A36465.sample_complete = 1;
 }
 
