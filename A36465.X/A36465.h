@@ -134,8 +134,8 @@
 #define PIN_RESET_DETECT                 _RG7
 
 // LEDs
-#define PIN_LED_OPERATIONAL_GREEN        _LATG6
-#define PIN_LED_A_RED                    _LATG8
+//#define PIN_LED_OPERATIONAL_GREEN        _LATG6  // Configured by can Module
+//#define PIN_LED_A_RED                    _LATG8  // Configured by can Module
 
 
 
@@ -216,6 +216,7 @@ typedef struct {
   unsigned int aft_B_sample_history[16];
   unsigned int aft_filtered_error_for_client;
 
+  unsigned int sample_index;
 } AFCControlData;
 
 extern AFCControlData global_data_A36465;
@@ -234,7 +235,7 @@ typedef struct {
 extern STEPPER_MOTOR afc_motor;
 
 #define _STATUS_AFC_AUTO_ZERO_HOME_IN_PROGRESS          _STATUS_0
-#define _STATUS_AFC_MODE_MANUAL_MODE                    _STATUS_1
+#define _STATUS_AFC_MODE_MANUAL_MODE                    _WARNING_0
 
 
 #define _FAULT_CAN_COMMUNICATION_LATCHED                _FAULT_0
