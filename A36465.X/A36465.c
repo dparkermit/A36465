@@ -349,6 +349,7 @@ void InitializeA36465(void) {
   _INT1IF = 0;
   _INT1IP = 7;
   _INT1IE = 1;
+  _INT1EP = 1;
 
   
   // Initialize the status register and load the inhibit and fault masks
