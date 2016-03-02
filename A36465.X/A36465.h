@@ -217,6 +217,10 @@ typedef struct {
   unsigned int aft_filtered_error_for_client;
 
   unsigned int sample_index;
+
+  unsigned int aft_control_voltage_low_energy;
+  unsigned int aft_control_voltage_high_energy;
+
 } AFCControlData;
 
 extern AFCControlData global_data_A36465;

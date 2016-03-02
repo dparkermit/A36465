@@ -273,6 +273,11 @@ void DoA36465(void) {
 
     // update the AFT control voltage
     // DPARKER consider timing this with Magnetron pulses
+    if (ETMCanSlaveIsNextPulseLevelHigh()) {
+      ETMAnalogSetOutput(&global_data_A36465.aft_control_voltage, global_data_A36465.aft_control_voltage_high_energy);
+    } else {
+      ETMAnalogSetOutput(&global_data_A36465.aft_control_voltage, global_data_A36465.aft_control_voltage_low_energy);
+    }
     ETMAnalogScaleCalibrateDACSetting(&global_data_A36465.aft_control_voltage);
     WriteLTC265X(&U23_LTC2654, LTC265X_WRITE_AND_UPDATE_DAC_A, global_data_A36465.aft_control_voltage.dac_setting_scaled_and_calibrated);
   
@@ -789,8 +794,8 @@ void ETMCanSlaveExecuteCMDBoardSpecific(ETMCanMessage* message_ptr) {
       */
     case ETM_CAN_REGISTER_AFC_SET_1_HOME_POSITION_AND_OFFSET:
       afc_motor.home_position = message_ptr->word0;
-      // unused offset
-      ETMAnalogSetOutput(&global_data_A36465.aft_control_voltage, message_ptr->word2);
+      global_data_A36465.aft_control_voltage_low_energy = message_ptr->word1;
+      global_data_A36465.aft_control_voltage_high_energy = message_ptr->word2;
       _CONTROL_NOT_CONFIGURED = 0;
       break;
 
