@@ -364,6 +364,7 @@ void InitializeA36465(void) {
   _NOT_LOGGED_REGISTER = 0;
   
   // Initialize the External EEprom
+  ETMEEPromUseExternal();
   ETMEEPromConfigureExternalDevice(EEPROM_SIZE_8K_BYTES, FCY_CLK, 400000, EEPROM_I2C_ADDRESS_0, 1);
 
 #define AGILE_REV 10
