@@ -3,6 +3,23 @@
 
 // This is the firmware for the AFC BOARD
 
+//Slow Movement
+#define SLOW_MOVE_MIN_ERROR        5  //50
+#define SLOW_MOVE_MIN_ERROR_MULT  .5  //.1
+
+#define SLOW_MOVE_MED_ERROR        20  //200 
+#define SLOW_MOVE_MED_ERROR_MULT   .65 //.15
+
+#define SLOW_MOVE_LARGE_ERROR      40  //400
+#define SLOW_MOVE_LARGE_ERROR_MULT .85 //.175
+
+
+// Fast Movement
+#define FAST_MOVE_MIN_ERROR        10  //100
+#define FAST_MOVE_MIN_ERROR_MULT   .85 //.175
+
+#define FAST_MOVE_LARGE_ERROR      50 //500
+#define FAST_MOVE_LARGE_ERROR_MULT 1  //.25 
 
 _FOSC(ECIO & CSW_FSCM_OFF); 
 _FWDT(WDT_ON & WDTPSA_512 & WDTPSB_8);  // 8 Second watchdog timer 
@@ -448,13 +465,13 @@ unsigned int FastModeGetStepsToMove(unsigned int samp_A, unsigned int samp_B) {
     global_data_A36465.aft_filtered_error_for_client = error + 0x8000;
   }
 
-  if (error >= 500) {
+  if (error >= FAST_MOVE_LARGE_ERROR) {
     // I am comfortable with our measurement.
     // Use the full scaling to get the steps to move
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.25), 0);
-  } else if (error >= 100) {
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(FAST_MOVE_LARGE_ERROR_MULT), 0);
+  } else if (error >= FAST_MOVE_MIN_ERROR) {
     // Our error is smaller and we don't want over correct due to signal error
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.175), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(FAST_MOVE_MIN_ERROR_MULT), 0);
   } else {
     // We are within 32 micro steps (1 full step) don't bother moving at all in fast mode
     steps = 0;
@@ -489,17 +506,17 @@ unsigned int SlowModeGetStepsToMove(unsigned int samp_A, unsigned int samp_B) {
     global_data_A36465.aft_filtered_error_for_client = error + 0x8000;
   }
 
-  if (error >= 400) {
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.175), 0);
-  } else if (error >= 200) {
+  if (error >= SLOW_MOVE_LARGE_ERROR) {
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(SLOW_MOVE_LARGE_ERROR_MULT), 0);
+  } else if (error >= SLOW_MOVE_MED_ERROR) {
     // I am comfortable with our measurement.
     // Use the full scaling to get the steps to move
     //steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.305344), 0);
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.15), 0);
-  } else if(error >= 50) {
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(SLOW_MOVE_MED_ERROR_MULT), 0);
+  } else if(error >= SLOW_MOVE_MIN_ERROR) {
     // Our error is smaller and we don't want over correct due to signal error
     //steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.152672), 0);
-    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(.1), 0);
+    steps = ETMScaleFactor2(error, MACRO_DEC_TO_CAL_FACTOR_2(SLOW_MOVE_MIN_ERROR_MULT), 0);
   } else {
     // We are within 8 micro steps (1/4 full step) don't bother moving at all in slow mode
     steps = 0;
